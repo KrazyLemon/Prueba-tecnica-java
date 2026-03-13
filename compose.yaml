@@ -1,0 +1,8 @@
+services:
+  api:
+    build: .
+    container_name: api-usuarios
+    ports:
+      - "8080:8080"
+    environment:
+      AES_SECRET: miejemplodesecretkey1234

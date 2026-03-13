@@ -1,5 +1,12 @@
-FROM  maven:3.9.4-eclipse-temurin-21-alpine
+FROM maven:3.9.9-eclipse-temurin-21
+
 WORKDIR /app
-COPY . .
+
+COPY pom.xml .
+RUN mvn -q -e -DskipTests dependency:go-offline
+
+COPY src ./src
+
 EXPOSE 8080
-CMD ["mvn", "spring-boot:run"]
+
+CMD ["mvn","spring-boot:run"]
