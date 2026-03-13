@@ -6,6 +6,8 @@ package com.prueba.main.repository;
 
 import com.prueba.main.model.Adress;
 import com.prueba.main.model.User;
+import com.prueba.main.service.Aes256GcmService;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -14,34 +16,16 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+
 public class UserRepository {
     private List<User> userList = new ArrayList<User>();
-    public UserRepository (){
-        Adress add1 = new Adress(
-                1,
-                "WorkAddress",
-                "street No.1",
-                "UK"
-        );
-        Adress add2 = new Adress(
-                2,
-                "HomeAddress",
-                "street No.2",
-                "AU"
-        );
+    private Aes256GcmService aes;
 
-        User user1 = new User(
-                UUID.randomUUID(),
-                "user1@mail.com",
-                "user1",
-                "7c4a8d09ca3762af61e59520943dc26494f8941b",
-                "+1 5555555555",
-                "AARR990101XXX",
-                "01-01-2026 00:00:00",
-                List.of(add1,add2)
-        );
-        userList.add(user1);
+    public UserRepository(Aes256GcmService aes) throws Exception {
+        this.aes = aes;
+        genUsers();
     }
+
     public List<User> getAllUsers(){
         return userList;
     }
@@ -78,6 +62,61 @@ public class UserRepository {
         return userList.stream()
                 .filter(user -> user.getId().equals(id))
                 .findFirst();
+    }
+
+    public void genUsers() throws Exception {
+        Adress add1 = new Adress(
+                1,
+                "WorkAddress",
+                "street No.1",
+                "UK"
+        );
+        Adress add2 = new Adress(
+                2,
+                "HomeAddress",
+                "street No.2",
+                "AU"
+        );
+        Adress add3 = new Adress(
+                3,
+                "School",
+                "street No.3",
+                "MX"
+        );
+
+        User user1 = new User(
+                UUID.randomUUID(),
+                "juanin@mail.com",
+                "Juan",
+                aes.encrypt("juan123"),
+                "+1 5555555555",
+                "AARR990101XXX",
+                "01-01-2026 00:00:00",
+                List.of(add1,add2)
+        );
+        User user2 = new User(
+                UUID.randomUUID(),
+                "angel@mail.com",
+                "Angel Velazquez",
+                aes.encrypt("angel123"),
+                "+52 5633816972",
+                "VEMA001016CX1",
+                "01-02-2026 12:02",
+                List.of(add1)
+        );
+        User user3 = new User(
+                UUID.randomUUID(),
+                "dark-vader@mail.com",
+                "Pedro Jorge",
+                aes.encrypt("pedro123"),
+                "+1 7777777",
+                "PJRR000330MX1",
+                "01-03-2026 13:00",
+                List.of(add3)
+        );
+        userList.add(user1);
+        userList.add(user2);
+        userList.add(user3);
     }
 }
 

@@ -1,7 +1,12 @@
 package com.prueba.main.service;
+import com.prueba.main.exceptions.BadRequestException;
+import com.prueba.main.exceptions.ConflictException;
+import com.prueba.main.exceptions.InternalServerException;
+import com.prueba.main.exceptions.ResourceNotFoundException;
 import com.prueba.main.model.User;
 import com.prueba.main.model.UserDto;
 import lombok.AllArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import com.prueba.main.repository.UserRepository;
 
@@ -54,22 +59,25 @@ public class UserService {
         return users;
     }
     public List<User> getUsersFiltered(String filter){
-        List<User> users = userRepository.getAllUsers();
-        String[] parts = filter.split(" ");
-        System.out.println(filter);
-        //System.out.println(parts);
 
-        if(parts.length != 3){
-            throw new IllegalArgumentException("Invalid filter format");
-        }
+        if(filter == null || filter.isBlank()) throw new BadRequestException("Filter cannot be empty");
+
+        String[] parts = filter.split(" ");
+        if(parts.length != 3) throw new BadRequestException("Invalid filter format. Expected: field operator value");
 
         String field = parts[0];
         String operator = parts[1];
         String value = parts[2];
 
+        if(!List.of("co","eq","sw","ew").contains(operator)){ throw new BadRequestException("Invalid operator: " + operator);}
+
+        List<User> users = userRepository.getAllUsers();
+
         return users.stream()
                 .filter(user -> {
-                    String fieldValue = getField(user,field);
+                    String fieldValue = getField(user, field);
+                    if(fieldValue == null) return false;
+
                     return switch (operator) {
                         case "co" -> fieldValue.contains(value);
                         case "eq" -> fieldValue.equals(value);
@@ -80,19 +88,21 @@ public class UserService {
                 })
                 .toList();
     }
-
-    public Optional<User> addUser(UserDto user) throws Exception {
-        if(userRepository.existsByTaxId(user.getTaxId())) {
-            System.out.println("Error al buscar Tax ID");
-            return Optional.empty();
-        }
+    public Optional<User> addUser(UserDto user) {
+        if(userRepository.existsByTaxId(user.getTaxId())) throw new ConflictException("Tax id in use");
         ZoneId zoneId = ZoneId.of("UTC+3");
         ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId);
         DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
         String createdAt = zonedDateTime.format(formateador);
-        String encryptedPass = aes256.encrypt(user.getPassword());
+        String encryptedPass ="";
+        try{
+            encryptedPass = aes256.encrypt(user.getPassword());
+        } catch (Exception e) {
+            throw new InternalServerException("Internal Server Error");
+        }
 
-        if(!isPhoneValid(user.getPhone()) || !isTaxIdValid(user.getTaxId())) return Optional.empty();
+        if(!isPhoneValid(user.getPhone())) throw new BadRequestException("Phone number invalid");
+        if(!isTaxIdValid(user.getTaxId())) throw new BadRequestException("Tax id invalid");
 
         User newUser = new User(
                 UUID.randomUUID(),
@@ -110,7 +120,7 @@ public class UserService {
 
     public Optional<User> updateUser(UUID id, UserDto user) {
         Optional<User> existingUser = userRepository.getUserById(id);
-        if(existingUser.isEmpty()) return Optional.empty();
+        if(existingUser.isEmpty()) throw new ResourceNotFoundException("User not found");
         User updatedUser = existingUser.get();
 
         if(user.getEmail() != null && !user.getEmail().isBlank()){
@@ -124,14 +134,14 @@ public class UserService {
                 String encryptedPass = aes256.encrypt(user.getPassword());
                 updatedUser.setPassword(encryptedPass);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new InternalServerException("Internal Server Error");
             }
         }
         if(user.getPhone() != null && !user.getPhone().isBlank() ){
             if(isPhoneValid(user.getPhone())) updatedUser.setPhone(user.getPhone());
         }
         if(user.getTaxId() != null && !user.getTaxId().isBlank()){
-            if(userRepository.existsByTaxId(user.getTaxId())) return Optional.empty();
+            if(userRepository.existsByTaxId(user.getTaxId())) throw new ConflictException("Tax id in use");
             if(isTaxIdValid(user.getTaxId())) updatedUser.setTaxId(user.getTaxId());
         }
         if(user.getAdresses() != null && !user.getAdresses().isEmpty()){
@@ -142,7 +152,7 @@ public class UserService {
         return  Optional.of(updatedUser);
     }
     public boolean deleteUser(UUID id) {
-        if(!userRepository.existsById(id)) return false;
+        if(!userRepository.existsById(id)) throw new ResourceNotFoundException("User not found");
         return userRepository.deleteUser(id);
     }
     public String getField(User user, String field){
@@ -170,7 +180,7 @@ public class UserService {
 //        }else{
 //            System.out.println("Telefono Incorrecto");
 //        }
-        phone.replace(" ","");
+        phone = phone.replace(" ","");
         return phone.matches(regex);
     }
     public boolean isTaxIdValid(String taxId) {
