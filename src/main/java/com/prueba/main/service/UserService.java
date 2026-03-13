@@ -80,13 +80,15 @@ public class UserService {
                 })
                 .toList();
     }
+
     public Optional<User> addUser(UserDto user) throws Exception {
-        if(userRepository.existsByTaxId(user.getTaxId()) ) {
+        if(userRepository.existsByTaxId(user.getTaxId())) {
+            System.out.println("Error al buscar Tax ID");
             return Optional.empty();
         }
-        ZoneId zoneId = ZoneId.of("UTC+3"); // Obtiene la zona horaria de Madagascar
+        ZoneId zoneId = ZoneId.of("UTC+3");
         ZonedDateTime zonedDateTime = ZonedDateTime.now(zoneId);
-        DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm"); // Formato de fecha y hora
+        DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
         String createdAt = zonedDateTime.format(formateador);
         String encryptedPass = aes256.encrypt(user.getPassword());
 
@@ -105,6 +107,7 @@ public class UserService {
 
         return Optional.of(userRepository.addUser(newUser));
     }
+
     public Optional<User> updateUser(UUID id, UserDto user) {
         Optional<User> existingUser = userRepository.getUserById(id);
         if(existingUser.isEmpty()) return Optional.empty();
@@ -160,13 +163,23 @@ public class UserService {
                 return "";
         }
     }
-
     public boolean isPhoneValid(String phone) {
-        String regex = "^(\\\\+\\\\d{1,4}[\\\\s-]?)?\\\\d{10}$";
+        String regex = "^(\\+\\d{1,4}[\\s-]?)?\\d{10}$";
+//        if(phone.matches(regex)){
+//            System.out.println("Telefono Correcto");
+//        }else{
+//            System.out.println("Telefono Incorrecto");
+//        }
+        phone.replace(" ","");
         return phone.matches(regex);
     }
     public boolean isTaxIdValid(String taxId) {
         String regex = "^([A-ZÑ\\x26]{3,4}([0-9]{2})(0[1-9]|1[0-2])(0[1-9]|1[0-9]|2[0-9]|3[0-1]))([A-Z\\d]{3})?$";
+//        if(taxId.matches(regex)){
+//            System.out.println("RFC Correcto");
+//        }else{
+//            System.out.println("RFC Incorrecto");
+//        }
         return taxId.matches(regex);
     }
 }
