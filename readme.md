@@ -13,6 +13,7 @@ La aplicación permite consultar usuarios y filtrarlos mediante una sintaxis sim
 * Spring Boot
 * Docker
 * Swagger / OpenAPI
+* Postman
 
 ---
 ```
@@ -44,6 +45,12 @@ Compilar el proyecto
 
 ```
 mvn clean install
+```
+
+Realiza las pruebas usando el siguiente workspace de postman
+
+```
+https://www.postman.com/j0ola1/workspace/prueba-tecnica
 ```
 
 ---
